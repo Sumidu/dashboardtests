@@ -47,7 +47,8 @@ ui <- dashboardPage(
               ),
               fluidRow(
                 infoBox("New Orders", 10 * 2, icon = icon("credit-card"), fill = TRUE), 
-                infoBoxOutput("progressBox2")
+                infoBoxOutput("progressBox2"),
+                infoBoxOutput("sum")
               ),
               fluidRow(
                 # Clicking this will increment the progress amount
@@ -110,6 +111,16 @@ server <- function(input, output, session) {
       hot_col("value", format = "$0.0,00", language = "de-DE") %>%
       hot_cols(colWidths = c(50,20,300,100,100), columnSorting = TRUE)
   })
+  
+  output$sum <- renderInfoBox({
+    DF = data()
+    iconstr <- ifelse(sum(DF$value, na.rm = T)>0, "thumbs-up", "thumbs-down")
+    infoBox(
+      "Progress", paste(sum(DF$value, na.rm = T),"€"), icon = icon(iconstr, lib = "glyphicon"),
+      color = ifelse(sum(DF$value, na.rm=T)<0, "red", "green"), fill = TRUE
+    )
+  })
+  
 }
 
 shinyApp(ui, server)
