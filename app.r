@@ -3,6 +3,13 @@ library(shiny)
 library(shinydashboard)
 library(rhandsontable)
 library(htmlwidgets)
+library(dplyr)
+library(DBI)
+library(pool)
+
+
+
+
 
 ui <- dashboardPage(
   dashboardHeader(title = "Project Viz", dropdownMenu(type = "messages",
@@ -27,6 +34,7 @@ ui <- dashboardPage(
     sidebarMenu(
       menuItem("Dashboard", tabName = "dashboard", icon = icon("dashboard")),
       menuItem("Projektauswahl", tabName = "projekte", icon = icon("th"),badgeLabel = "neu", badgeColor = "green"),
+      menuItem("Datenbank", tabName = "db", icon = icon("th"),badgeLabel = "neu", badgeColor = "red"),
       menuItem("SAP öffnen", icon = icon("file-code-o"), 
                href = "https://github.com/rstudio/shinydashboard/")
     )
@@ -65,12 +73,24 @@ ui <- dashboardPage(
       # Second tab content
       tabItem(tabName = "projekte",
               h2("Projektauswahl")
+      ),
+      
+      # Second tab content
+      tabItem(tabName = "db",
+              h2("Datenbank"),
+              fluidRow(
+                rHandsontableOutput("db", width = 350)
+                )
       )
     )
   )
 )
 
 server <- function(input, output, session) {
+
+  
+
+  
   set.seed(122)
   histdata <- rnorm(500)
   values = reactiveValues()
@@ -78,7 +98,7 @@ server <- function(input, output, session) {
   output$plot1 <- renderPlot({
     data <- histdata[seq_len(input$slider)]
     hist(data)
-  })
+  }) 
   output$progressBox2 <- renderInfoBox({
     infoBox(
       "Progress", paste0(25 + input$count, "%"), icon = icon("list"),
@@ -104,6 +124,24 @@ server <- function(input, output, session) {
     DF
   })
   
+  
+  datab = reactive({
+    if (!is.null(input$db)) {
+      DFb = hot_to_r(input$db)
+    } else {
+      if (is.null(values[["DFb"]])){
+        con <- dbConnect(RSQLite::SQLite(), "mydata.sqlite")
+        DFb = con %>% tbl("mtcars") %>% head(20) %>% as.data.frame()
+      }
+        
+      else
+        DFb = values[["DFb"]]
+    }
+    
+    values[["DFb"]] = DFb
+    DFb
+  })
+  
   output$hot <- renderRHandsontable({
     DF = data()
     if (!is.null(DF))
@@ -121,6 +159,16 @@ server <- function(input, output, session) {
     )
   })
   
+  output$db <- renderRHandsontable({
+    DFb = datab()
+    if (!is.null(DFb))
+      rhandsontable(DFb, width=900, height=300, stretchH="all") 
+  })
+  output$tbl <- renderTable({
+    con <- dbConnect(RSQLite::SQLite(), "mydata.sqlite")
+    #on.exit(dbDisconnect(con), add = TRUE)
+    con %>% tbl("mtcars") %>% head(20) %>% as.data.frame()
+  })
 }
 
 shinyApp(ui, server)
