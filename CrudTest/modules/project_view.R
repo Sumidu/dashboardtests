@@ -5,35 +5,41 @@ projectViewUI <- function(id) {
   # Create a namespace function using the provided id
   ns <- NS(id)
   tagList(
-  fluidRow(
-    box(width = 12,
-        h1("Personal"),
-        rHandsontableOutput(ns("hot"))
+    fluidRow(
+      box(width = 12,
+          h2("Laufzeiten"),
+          plotOutput(ns("runtimes"), brush = "plotbrush"),
+          uiOutput(outputId = ns("name_filter")),
+          dateRangeInput(inputId = ns("date_range_sel"),
+                         label = "Zeitraum auswählen:",
+                         start = "2016-01-01",
+                         end = "2026-12-31",
+                         min = "2016-01-01",
+                         max = "2056-12-31",
+                         startview = "decade",
+                         weekstart = 1,
+                         language = "de",
+                         autoclose = T,
+                         separator = "bis",
+                         format= "dd-mm-yy")
+          ) 
+      ),
+    fluidRow(
+      box(width = 12,
+          h1("Personal"),
+          rHandsontableOutput(ns("hot"))
+      )
     )
-  ),
-  fluidRow(
-    box(width = 12,
-        h2("Laufzeiten"),
-        plotOutput(ns("runtimes")),
-        sliderInput(ns("year_begin"), "Ab:",
-                    min = ymd("2016-1-1"),
-                    max = ymd("2056-1-1"), 
-                    value = ymd("2016-1-1"), 
-                    timeFormat = "%M%Y"
-        ),
-        sliderInput(ns("year_end"), "Ab:",
-                    min = ymd("2016-1-1"),
-                    max = ymd("2056-1-1"), 
-                    value = ymd("2022-1-1"), 
-                    timeFormat = "%Y"
-        )
-        ) 
-  )
   )
 }
 
 projectview <- function(input, output, session){
   values = reactiveValues()
+  nameslist = reactive({
+    DF = data()
+    if (!is.null(DF))
+      DF %>% pull(Nachname) %>% unique() %>% sort()
+  })
   data = reactive({
     if (!is.null(input$hot)) {
       DF = hot_to_r(input$hot)
@@ -59,7 +65,21 @@ projectview <- function(input, output, session){
 
   output$runtimes <- renderPlot({
     DF = data()
-    if (!is.null(DF))
-      plot_personal(DF, input$year_begin, input$year_end) 
+    req(input$date_range_sel)
+    req(input$name_filter_selection)
+    if (!is.null(DF)){
+      plot_personal(DF, input$date_range_sel, input$name_filter_selection) 
+    }
+  })
+  
+  output$name_filter <- renderUI({
+    tagList(
+      selectInput(inputId = session$ns("name_filter_selection"),
+                  label = "Personen auswählen",
+                  choices = nameslist(),
+                  selected = head(nameslist(),5),
+                  selectize = TRUE,
+                  multiple = TRUE)
+    )
   })
 }

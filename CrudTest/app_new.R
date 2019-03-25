@@ -14,11 +14,12 @@ library(htmlwidgets)
 library(dplyr)
 library(DBI)
 library(pool)
+library(tidyverse)
 
 source("modules/project_view.R")
 source("view_sidebar.R")
 source("view_body.R")
-
+source("read_personal.R")
 con <- dbConnect(RSQLite::SQLite(), "mydata.sqlite")
 
 ui <- dashboardPage(
